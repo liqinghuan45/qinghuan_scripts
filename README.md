@@ -9,7 +9,8 @@ Claude Code + 智谱AI GLM 模型的配置和管理脚本，以及开发环境�
   - [清理脚本](#清理脚本)
 - [开发环境脚本](#开发环境脚本)
   - [安装脚本](#安装脚本)
-  - [清理脚本](#清理脚本)
+  - [清理脚本](#清理脚本-1)
+- [Git 工具脚本](#git-工具脚本)
 - [常见问题](#常见问题)
 
 ---
@@ -170,6 +171,52 @@ clean_dev_env.bat --skip-go --skip-rust
 
 ---
 
+## Git 工具脚本
+
+### 安装 Git 和 GitHub CLI
+
+一键安装 Git 和 GitHub CLI (gh)。
+
+```cmd
+install_git_tools.bat
+```
+
+**参数：**
+
+| 参数 | 说明 |
+|------|------|
+| `--skip-git` | 跳过 Git 安装 |
+| `--skip-gh` | 跳过 GitHub CLI 安装 |
+| `-h, --help` | 显示帮助信息 |
+
+**示例：**
+
+```cmd
+# 安装 Git 和 GitHub CLI
+install_git_tools.bat
+
+# 只安装 Git
+install_git_tools.bat --skip-gh
+```
+
+**安装内容：**
+
+- **Git** - 最新版本，自动配置默认设置
+- **GitHub CLI** - 用于管理 GitHub 仓库和操作
+
+**常用命令：**
+
+```cmd
+# Git 配置
+git config --global user.name "Your Name"
+git config --global user.email "your_email@example.com"
+
+# GitHub CLI 登录
+gh auth login
+```
+
+---
+
 ## 常见问题
 
 ### Q: Claude Code 重置脚本需要管理员权限吗？
@@ -217,6 +264,12 @@ python --version
 node --version
 go version
 cargo --version
+
+# 检查 Git
+git --version
+
+# 检查 GitHub CLI
+gh --version
 ```
 
 ### Q: 清理脚本会删除我的项目吗？
