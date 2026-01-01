@@ -235,7 +235,7 @@ A: 主要区别：
 
 ## 仓库地址
 
-https://github.com/liqinghuan45/claude-glm-scripts
+https://github.com/liqinghuan45/qinghuan_scripts
 
 ---
 
