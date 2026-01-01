@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Claude Code + GLM-4.6 一键配置脚本
-# 基于智谱AI官方推荐方式配置
+# Claude Code + GLM 一键配置脚本
+# 所有参数必须通过命令行传递
 
 set -e
 
@@ -13,8 +13,77 @@ BLUE='\033[0;34m'
 CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
-# 你的API密钥（硬编码）
-API_KEY="4fcc9acbf7a64159b430332ac62d03a1.Z2ngxJocffMxNEwi"
+# 默认值
+API_KEY=""
+MODEL_NAME=""
+ZAI_API_KEY=""
+SKIP_MCP=0
+
+# 解析命令行参数
+parse_args() {
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            -k|--key)
+                API_KEY="$2"
+                shift 2
+                ;;
+            -m|--model)
+                MODEL_NAME="$2"
+                shift 2
+                ;;
+            -z|--zai-key)
+                ZAI_API_KEY="$2"
+                shift 2
+                ;;
+            --skip-mcp)
+                SKIP_MCP=1
+                shift
+                ;;
+            -h|--help)
+                show_help
+                exit 0
+                ;;
+            *)
+                echo -e "${RED}错误: 未知选项 $1${NC}"
+                show_help
+                exit 1
+                ;;
+        esac
+    done
+}
+
+# 显示帮助信息
+show_help() {
+    echo "用法: $0 -k <API_KEY> -m <MODEL> [-z <ZAI_API_KEY>] [--skip-mcp]"
+    echo ""
+    echo "必需参数:"
+    echo "  -k, --key <API_KEY>        指定GLM API密钥 (必需)"
+    echo "  -m, --model <MODEL>        指定模型名称 (必需)"
+    echo ""
+    echo "可选参数:"
+    echo "  -z, --zai-key <KEY>        指定ZAI API密钥 (用于MCP识图功能)"
+    echo "  --skip-mcp                 跳过MCP服务器安装"
+    echo "  -h, --help                 显示此帮助信息"
+    echo ""
+    echo "示例:"
+    echo "  $0 -k your_api_key -m glm-4.7"
+    echo "  $0 -k your_api_key -m glm-4.7 -z your_zai_key"
+    echo "  $0 -k your_api_key -m glm-4-plus --skip-mcp"
+    echo ""
+    echo "可用模型版本:"
+    echo "  glm-4.7       - GLM-4.7 (最新版本)"
+    echo "  glm-4-plus    - GLM-4 Plus"
+    echo "  glm-4-air     - GLM-4 Air (轻量版)"
+    echo "  glm-4-airx    - GLM-4 AirX"
+    echo "  glm-4-flash   - GLM-4 Flash (快速版)"
+    echo "  glm-4-long    - GLM-4 Long (长文本)"
+    echo "  glm-4v        - GLM-4V (视觉版)"
+    echo "  glm-4v-plus   - GLM-4V Plus"
+    echo ""
+    echo "注意:"
+    echo "  - API密钥和模型名称必须通过命令行参数指定"
+    echo "  - 如需使用MCP功能(识图、联网搜索)，请提供ZAI密钥"
+}
 
 # 打印带颜色的消息
 print_info() {
@@ -49,13 +118,40 @@ check_root() {
     fi
 }
 
+# 验证必需参数
+validate_params() {
+    if [[ -z "$API_KEY" ]]; then
+        print_error "错误: 未指定API密钥"
+        echo ""
+        echo "使用 -k 或 --key 参数指定GLM API密钥"
+        echo "使用 -h 查看帮助信息"
+        echo ""
+        exit 1
+    fi
+
+    if [[ -z "$MODEL_NAME" ]]; then
+        print_error "错误: 未指定模型名称"
+        echo ""
+        echo "使用 -m 或 --model 参数指定模型"
+        echo "使用 -h 查看帮助信息"
+        echo ""
+        exit 1
+    fi
+}
+
 # 显示开始信息
 show_header() {
     echo "========================================"
-    echo "  Claude Code + GLM-4.6 一键配置脚本  "
+    echo "  Claude Code + GLM 一键配置脚本  "
     echo "========================================"
     echo "基于智谱AI官方推荐方式配置"
     echo "API密钥: ${API_KEY:0:10}...${API_KEY: -10}"
+    echo "模型: $MODEL_NAME"
+    if [[ -n "$ZAI_API_KEY" ]]; then
+        echo "ZAI密钥: ${ZAI_API_KEY:0:10}...${ZAI_API_KEY: -10}"
+    else
+        echo "ZAI密钥: 未提供 (MCP功能将跳过)"
+    fi
     echo ""
 }
 
@@ -113,9 +209,9 @@ install_claude_code() {
     print_success "Claude Code安装完成"
 }
 
-# 配置GLM-4.6
+# 配置GLM
 configure_glm() {
-    print_step "配置GLM-4.6..."
+    print_step "配置 $MODEL_NAME..."
 
     # 创建配置目录
     mkdir -p ~/.claude
@@ -126,13 +222,13 @@ configure_glm() {
   "env": {
     "ANTHROPIC_AUTH_TOKEN": "${API_KEY}",
     "ANTHROPIC_BASE_URL": "https://open.bigmodel.cn/api/anthropic",
-    "ANTHROPIC_MODEL": "glm-4.6"
+    "ANTHROPIC_MODEL": "${MODEL_NAME}"
   },
   "permissions": {
     "allow": ["Read", "Write", "Execute"],
     "deny": []
   },
-  "model": "glm-4.6",
+  "model": "${MODEL_NAME}",
   "max_tokens": 4096,
   "temperature": 0.7
 }
@@ -141,7 +237,7 @@ EOF
     # 设置正确的文件权限
     chmod 600 ~/.claude/settings.json
 
-    print_success "GLM-4.6配置完成"
+    print_success "$MODEL_NAME 配置完成"
 }
 
 # 设置环境变量
@@ -151,7 +247,7 @@ setup_environment() {
     # 添加到当前会话
     export ANTHROPIC_AUTH_TOKEN="${API_KEY}"
     export ANTHROPIC_BASE_URL="https://open.bigmodel.cn/api/anthropic"
-    export ANTHROPIC_MODEL="glm-4.6"
+    export ANTHROPIC_MODEL="${MODEL_NAME}"
 
     # 确保npm全局bin路径在PATH中
     local npm_bin_path="$(npm root -g)/../bin"
@@ -182,7 +278,7 @@ setup_environment() {
             # 添加新配置
             echo "export ANTHROPIC_AUTH_TOKEN=\"${API_KEY}\"" >> "$config"
             echo "export ANTHROPIC_BASE_URL=\"https://open.bigmodel.cn/api/anthropic\"" >> "$config"
-            echo "export ANTHROPIC_MODEL=\"glm-4.6\"" >> "$config"
+            echo "export ANTHROPIC_MODEL=\"${MODEL_NAME}\"" >> "$config"
 
             # 添加npm bin路径到PATH
             echo "export PATH=\"$npm_bin_path:\$PATH\"" >> "$config"
@@ -240,7 +336,7 @@ setup_environment() {
             fi
 
             # 检查模型配置是否写入
-            if grep -q "ANTHROPIC_MODEL=\"glm-4.6\"" "$config" 2>/dev/null; then
+            if grep -q "ANTHROPIC_MODEL=\"${MODEL_NAME}\"" "$config" 2>/dev/null; then
                 print_success "✓ $config 包含正确的模型配置"
             else
                 print_warning "⚠ $config 缺少正确的模型配置"
@@ -260,7 +356,7 @@ setup_environment() {
 
 # 验证GLM配置
 verify_glm_config() {
-    print_step "验证GLM-4.6配置..."
+    print_step "验证 $MODEL_NAME 配置..."
 
     local config_file="$HOME/.claude/settings.json"
 
@@ -276,8 +372,8 @@ verify_glm_config() {
         fi
 
         # 检查模型配置
-        if grep -q "glm-4.6" "$config_file" 2>/dev/null; then
-            print_success "✓ 模型配置为GLM-4.6"
+        if grep -q "$MODEL_NAME" "$config_file" 2>/dev/null; then
+            print_success "✓ 模型配置为 $MODEL_NAME"
         else
             print_error "✗ 模型配置错误"
             return 1
@@ -300,17 +396,28 @@ verify_glm_config() {
         return 1
     fi
 
-    print_success "GLM-4.6配置验证完成"
+    print_success "$MODEL_NAME 配置验证完成"
 }
 
 # 安装MCP服务器
 install_mcp_servers() {
+    if [[ "$SKIP_MCP" -eq 1 ]]; then
+        print_info "已跳过MCP服务器安装 (--skip-mcp)"
+        return
+    fi
+
+    if [[ -z "$ZAI_API_KEY" ]]; then
+        print_info "未提供ZAI密钥，跳过MCP服务器安装"
+        print_info "如需使用MCP功能(识图、联网搜索)，请使用 -z 参数提供ZAI密钥"
+        return
+    fi
+
     print_step "安装智谱MCP服务器..."
 
     # 1. 安装zai-mcp-server (识图MCP)
     print_install "安装zai-mcp-server (识图功能)..."
     if command -v claude >/dev/null 2>&1; then
-        claude mcp add -s user zai-mcp-server --env Z_AI_API_KEY=4fcc9acbf7a64159b430332ac62d03a1.Z2ngxJocffMxNEwi -- npx -y "@z_ai/mcp-server" 2>/dev/null || print_warning "zai-mcp-server安装可能失败，请手动检查"
+        claude mcp add -s user zai-mcp-server --env Z_AI_API_KEY=$ZAI_API_KEY -- npx -y "@z_ai/mcp-server" 2>/dev/null || print_warning "zai-mcp-server安装可能失败，请手动检查"
         print_success "zai-mcp-server安装命令已执行"
     else
         print_warning "Claude Code不可用，跳过MCP安装"
@@ -319,7 +426,7 @@ install_mcp_servers() {
     # 2. 安装web-search-prime (联网搜索MCP)
     print_install "安装web-search-prime (联网搜索)..."
     if command -v claude >/dev/null 2>&1; then
-        claude mcp add -s user -t http web-search-prime https://open.bigmodel.cn/api/mcp/web_search_prime/mcp --header "Authorization: Bearer 4fcc9acbf7a64159b430332ac62d03a1.Z2ngxJocffMxNEwi" 2>/dev/null || print_warning "web-search-prime安装可能失败，请手动检查"
+        claude mcp add -s user -t http web-search-prime https://open.bigmodel.cn/api/mcp/web_search_prime/mcp --header "Authorization: Bearer $ZAI_API_KEY" 2>/dev/null || print_warning "web-search-prime安装可能失败，请手动检查"
         print_success "web-search-prime安装命令已执行"
     else
         print_warning "Claude Code不可用，跳过MCP安装"
@@ -393,8 +500,8 @@ show_usage() {
     echo "🚀 启动Claude Code:"
     echo "   claude"
     echo ""
-    echo "🔧 强制指定GLM-4.6模型启动:"
-    echo "   claude --model glm-4.6"
+    echo "🔧 强制指定 $MODEL_NAME 模型启动:"
+    echo "   claude --model $MODEL_NAME"
     echo ""
     echo "🔧 检查当前使用的模型:"
     echo "   在Claude Code中输入: /model"
@@ -419,24 +526,34 @@ show_usage() {
     echo "   - 或使用完整路径: \$(npm root -g)/../bin/claude"
     echo ""
     echo "📋 配置信息:"
-    echo "   - 已配置模型: GLM-4.6"
+    echo "   - 已配置模型: $MODEL_NAME"
     echo "   - API提供商: 智谱AI (bigmodel.cn)"
     echo "   - 配置文件: ~/.claude/settings.json"
     echo "   - npm bin路径: $(npm root -g)/../bin"
     echo ""
-    echo "🔌 已安装MCP服务器:"
-    echo "   - zai-mcp-server: 识图功能"
-    echo "   - web-search-prime: 联网搜索"
-    echo ""
-    echo "💡 MCP使用方法:"
-    echo "   - 在Claude Code中直接上传图片进行识图"
-    echo "   - 使用联网搜索获取最新信息"
+    if [[ -n "$ZAI_API_KEY" ]]; then
+        echo "🔌 已安装MCP服务器:"
+        echo "   - zai-mcp-server: 识图功能"
+        echo "   - web-search-prime: 联网搜索"
+        echo ""
+        echo "💡 MCP使用方法:"
+        echo "   - 在Claude Code中直接上传图片进行识图"
+        echo "   - 使用联网搜索获取最新信息"
+    else
+        echo "🔌 MCP服务器: 未安装 (使用 -z 参数提供ZAI密钥以安装)"
+    fi
     echo ""
     echo "========================================"
 }
 
 # 主函数
 main() {
+    # 解析参数
+    parse_args "$@"
+
+    # 验证参数
+    validate_params
+
     show_header
     check_root
 
@@ -459,7 +576,7 @@ main() {
     print_info "立即可用的启动方式："
     print_info "npx @anthropic-ai/claude-code"
     echo ""
-    print_success "🎉 Claude Code + GLM-4.6 配置完成！"
+    print_success "🎉 Claude Code + $MODEL_NAME 配置完成！"
 }
 
 # 执行主函数
